@@ -16,6 +16,7 @@ import {
 import { SearchBox } from "@fluentui/react/lib/SearchBox";
 import { IDetailsListProps } from "@fluentui/react/lib/DetailsList";
 import { IButtonStyles, IconButton } from "@fluentui/react/lib/Button";
+import { Selection } from "@fluentui/react";
 import {
   DetailsList,
   DetailsRow,
@@ -23,6 +24,8 @@ import {
   IDetailsRowProps,
   SelectionMode,
   getTheme,
+  IDropdownOption,
+  Dropdown,
 } from "@fluentui/react";
 import { IColumn } from "@fluentui/react";
 import { DefaultButton, PrimaryButton } from "@fluentui/react";
@@ -44,16 +47,30 @@ interface IMyItem {
   assigned: string; // URL to avatar image
   dateCreated: string;
   dateDue: string;
-  status: string;
+  description: string;
+  isDescriptionExpanded?: boolean;
 }
+
+const names = [
+  "Alice",
+  "Bob",
+  "Charlie",
+  "David",
+  "Eva",
+  "Frank",
+  "Grace",
+  "Hannah",
+  "Ian",
+  "Jack",
+];
 
 // Generate sample data
 const createMyItems = (count: number): IMyItem[] => {
   return Array.from({ length: count }, (_, i) => ({
     key: `item-${i}`,
-    project: `Project ${i}`,
+    project: projectOptions[0].key as string,
     task: `Task ${i}`,
-    assigned: `https://i.pravatar.cc/40?img=${i}`, // example avatar image
+    assigned: names[i % names.length], // names
     dateCreated: new Date(
       2025,
       0,
@@ -64,38 +81,74 @@ const createMyItems = (count: number): IMyItem[] => {
       1,
       Math.floor(Math.random() * 28) + 1
     ).toLocaleDateString(),
-    status: i % 2 === 0 ? "In Progress" : "Completed",
+    description: `This is a sample description for task ${i}`,
+    isDescriptionExpanded: true,
   }));
 };
 
+const projectOptions: IDropdownOption[] = [
+  { key: "project0", text: "Project 0" },
+  { key: "project1", text: "Project 1" },
+  { key: "project2", text: "Project 2" },
+  { key: "project3", text: "Project 3" },
+];
+
 // Define columns for the DetailsList
-const myColumns: IColumn[] = [
+const myColumns = (
+  updateProject: (index: number, newProject: string) => void,
+  updateTask: (index: number, newTask: string) => void,
+  toggleDescriptionExpand: (index: number) => void,
+  updateDescription: (index: number, newDescription: string) => void
+): IColumn[] => [
   {
     key: "project",
     name: "Project",
     fieldName: "project",
     minWidth: 100,
-    maxWidth: 200,
+    maxWidth: 400,
     isResizable: true,
+    onRender: (item: IMyItem, index?: number) => (
+      <Dropdown
+        selectedKey={item.project}
+        options={projectOptions}
+        onChange={(e, option) => {
+          if (index !== undefined && option) {
+            updateProject(index, option.key as string);
+          }
+        }}
+      />
+    ),
   },
   {
     key: "task",
     name: "Task",
     fieldName: "task",
-    minWidth: 100,
-    maxWidth: 200,
-    isResizable: true,
+    minWidth: 150,
+    onRender: (item: IMyItem, index?: number) => (
+      <input
+        type="text"
+        value={item.task}
+        style={{
+          width: "100%",
+          border: "none",
+          background: "transparent",
+        }}
+        onChange={(e) => {
+          if (index !== undefined) {
+            updateTask(index, e.target.value);
+          }
+        }}
+      />
+    ),
   },
   {
     key: "assigned",
     name: "Assigned",
     fieldName: "assigned",
-    minWidth: 50,
+    minWidth: 100,
     maxWidth: 80,
     isResizable: false,
-    onRender: (item: IMyItem) => (
-      <img src={item.assigned} alt="assigned" style={{ borderRadius: "50%" }} />
-    ),
+    onRender: (item: IMyItem) => <span>{item.assigned}</span>,
   },
   {
     key: "dateCreated",
@@ -112,18 +165,51 @@ const myColumns: IColumn[] = [
     maxWidth: 120,
   },
   {
-    key: "status",
-    name: "Status",
-    fieldName: "status",
-    minWidth: 80,
-    maxWidth: 120,
+    key: "description",
+    name: "Description",
+    fieldName: "description",
+    minWidth: 200,
+    maxWidth: 400,
+    isResizable: true,
+    onRender: (item: IMyItem, index?: number) => (
+      <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 5 }}>
+        <div
+          contentEditable
+          suppressContentEditableWarning
+          style={{
+            whiteSpace: item.isDescriptionExpanded ? "normal" : "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            maxWidth: item.isDescriptionExpanded ? "400px" : "200px",
+            border: "1px solid #ccc",
+            padding: "2px 4px",
+            borderRadius: 4,
+          }}
+          onBlur={(e) => {
+            if (index !== undefined) {
+              updateDescription(index, e.currentTarget.textContent || "");
+            }
+          }}
+        >
+          {item.description}
+        </div>
+        <IconButton
+          iconProps={{
+            iconName: item.isDescriptionExpanded ? "CollapseMenu" : "More",
+          }}
+          title={item.isDescriptionExpanded ? "Collapse" : "Expand"}
+          onClick={() => index !== undefined && toggleDescriptionExpand(index)}
+        />
+      </Stack>
+    ),
   },
+
   {
     key: "actions",
     name: "Actions",
     fieldName: "actions",
-    minWidth: 80,
-    maxWidth: 100,
+    minWidth: 100,
+    maxWidth: 140,
     onRender: (item: IMyItem) => {
       // Render Add and Delete buttons for each row
       const addIcon: IIconProps = { iconName: "Add" };
@@ -148,38 +234,171 @@ const myColumns: IColumn[] = [
   },
 ];
 
-// DetailsList example component
-export class MyDetailsList extends React.Component {
-  private _items: IMyItem[];
+interface IMyListState {
+  items: IMyItem[];
+  selectedProject: string;
+}
 
+export class MyDetailsList extends React.Component<{}, IMyListState> {
+  private _selection: Selection;
   constructor(props: {}) {
     super(props);
-    this._items = createMyItems(10); // create 50 rows
+    const items = createMyItems(10);
+    this.state = { items, selectedProject: projectOptions[0].key as string };
+    this._selection = new Selection({
+      onSelectionChanged: () => {
+        // You can handle selection changes here if needed
+        console.log("Selected count:", this._selection.getSelectedCount());
+      },
+    });
   }
 
-  render() {
-    return (
-      <DetailsList
-        items={this._items}
-        columns={myColumns}
-        setKey="set"
-        selectionMode={SelectionMode.multiple} // or SelectionMode.multiple for multiple selection
-        checkButtonAriaLabel="select row"
-        onRenderRow={this._onRenderRow}
-      />
-    );
-  }
+  private _updateProject = (index: number, newProject: string) => {
+    const items = [...this.state.items];
+    items[index].project = String(newProject);
+    this.setState({ items });
+  };
+
+  private _updateTask = (index: number, newTask: string) => {
+    const items = [...this.state.items];
+    items[index].task = newTask;
+    this.setState({ items });
+  };
+
+  private _applyProjectToAll = () => {
+    const { selectedProject, items } = this.state;
+    const updatedItems = items.map((item) => ({
+      ...item,
+      project: selectedProject,
+    }));
+    this.setState({ items: updatedItems });
+  };
+
+  private _updateDescription = (index: number, newDescription: string) => {
+    const items = [...this.state.items];
+    items[index].description = newDescription;
+    this.setState({ items });
+  };
+
+  private _toggleDescriptionExpand = (index: number) => {
+    const items = [...this.state.items];
+    items[index].isDescriptionExpanded = !items[index].isDescriptionExpanded;
+    this.setState({ items });
+  };
 
   private _onRenderRow = (props?: IDetailsRowProps) => {
-    const customStyles: Partial<IDetailsRowStyles> = {};
-    if (props) {
-      if (props.itemIndex % 2 === 0) {
-        customStyles.root = { backgroundColor: theme.palette.themeLighterAlt };
-      }
-      return <DetailsRow {...props} styles={customStyles} />;
-    }
-    return null;
+    if (!props) return null;
+
+    const customStyles: Partial<IDetailsRowStyles> = {
+      root: {
+        backgroundColor:
+          props.itemIndex % 2 === 0 ? theme.palette.themeLighterAlt : undefined,
+        minHeight: 60,
+      },
+      cell: {
+        display: "flex",
+        alignItems: "center",
+      },
+    };
+
+    return <DetailsRow {...props} styles={customStyles} />;
   };
+
+  // private _onRenderRow = (props?: IDetailsRowProps) => {
+  //   const customStyles: Partial<IDetailsRowStyles> = {};
+  //   if (props && props.itemIndex % 2 === 0) {
+  //     customStyles.root = {
+  //       backgroundColor: theme.palette.themeLighterAlt,
+  //       minHeight: 60,
+  //       lineHeight: "50px",
+  //     };
+  //   }
+  //   return props ? <DetailsRow {...props} styles={customStyles} /> : null;
+  // };
+
+  render() {
+    const columns = myColumns(
+      this._updateProject,
+      this._updateTask,
+      this._toggleDescriptionExpand,
+      this._updateDescription
+    );
+    //   if (col.key === "project") {
+    //     return {
+    //       ...col,
+    //       onRender: (item: IMyItem, index?: number) => (
+    //         <Dropdown
+    //           selectedKey={item.project}
+    //           options={projectOptions}
+    //           onChange={(e, option) =>
+    //             index !== undefined &&
+    //             option &&
+    //             this._updateProject(index, option.key as string)
+    //           }
+    //         />
+    //       ),
+    //     };
+    //   }
+    //   if (col.key === "task") {
+    //     return {
+    //       ...col,
+    //       onRender: (item: IMyItem, index?: number) => (
+    //         <input
+    //           type="text"
+    //           value={item.task}
+    //           style={{
+    //             width: "100%",
+    //             border: "none",
+    //             background: "transparent",
+    //           }}
+    //           onChange={(e) =>
+    //             index !== undefined && this._updateTask(index, e.target.value)
+    //           }
+    //         />
+    //       ),
+    //     };
+    //   }
+    //   return col;
+    // });
+
+    return (
+      <Stack tokens={{ childrenGap: 10 }}>
+        <Stack horizontal tokens={{ childrenGap: 10 }} verticalAlign="center">
+          <DefaultButton
+            text="Add All Tasks to Project"
+            split
+            menuProps={{
+              items: projectOptions.map((option) => ({
+                key: option.key.toString(),
+                text: option.text,
+                onClick: () =>
+                  this.setState({ selectedProject: option.key as string }),
+              })),
+            }}
+            onClick={this._applyProjectToAll}
+          />
+          <span style={{ fontSize: 14, color: "#555" }}>
+            Current: <strong>{this.state.selectedProject}</strong>
+          </span>
+        </Stack>
+        <DetailsList
+          items={this.state.items}
+          columns={myColumns(
+            this._updateProject,
+            this._updateTask,
+            this._toggleDescriptionExpand,
+            this._updateDescription
+          )}
+          setKey="set"
+          selection={this._selection}
+          selectionMode={SelectionMode.multiple}
+          checkButtonAriaLabel="select row"
+          onRenderRow={this._onRenderRow}
+        />
+        <ButtonDefault selectAll={() => this._selection.setAllSelected(true)} />
+      </Stack>
+    );
+  }
 }
 
 // Button props interface
@@ -247,25 +466,17 @@ const stackStyles: Partial<IStackStyles> = {
   },
 };
 
-//Primary Button
-export const ButtonDefault: React.FunctionComponent<IButtonProps> = ({
-  disabled,
-  checked,
-}) => {
-  const handleClick = (): void => alert("Clicked");
-
+// ButtonDefault component
+export const ButtonDefault: React.FunctionComponent<{
+  selectAll?: () => void;
+  disabled?: boolean;
+  checked?: boolean;
+}> = ({ selectAll, disabled, checked }) => {
   return (
     <Stack horizontal tokens={stackTokens}>
-      {/* <DefaultButton
-        text="Secondary"
-        onClick={handleClick}
-        allowDisabledFocus
-        disabled={disabled}
-        checked={checked}
-      /> */}
       <PrimaryButton
         text="Send to Asana"
-        onClick={handleClick}
+        onClick={selectAll}
         allowDisabledFocus
         disabled={disabled}
         checked={checked}
@@ -329,7 +540,6 @@ export const App: React.FunctionComponent = () => {
         verticalAlign="center"
         tokens={{ childrenGap: 20 }}
       >
-        <ButtonDefault />
         <ButtonSplitCustom />
         <SearchBoxUnderlined />
       </Stack>
