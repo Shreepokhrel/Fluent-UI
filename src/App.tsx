@@ -181,7 +181,7 @@ const myColumns = (
             overflow: "hidden",
             textOverflow: "ellipsis",
             maxWidth: item.isDescriptionExpanded ? "400px" : "200px",
-            border: "1px solid #ccc",
+            border: "1px solid #6264A7",
             padding: "2px 4px",
             borderRadius: 4,
           }}
@@ -214,18 +214,40 @@ const myColumns = (
       // Render Add and Delete buttons for each row
       const addIcon: IIconProps = { iconName: "Add" };
       const deleteIcon: IIconProps = { iconName: "Delete" };
+      // Custom button styles
+      const addButtonStyles = {
+        root: {
+          color: "#107C10", // Fluent green
+        },
+        rootHovered: {
+          backgroundColor: "#E6F4EA", // light green hover
+          color: "#0B6A0B",
+        },
+      };
+
+      const deleteButtonStyles = {
+        root: {
+          color: "#A4262C", // Fluent red
+        },
+        rootHovered: {
+          backgroundColor: "#FDE7E9", // light red hover
+          color: "#8E1921",
+        },
+      };
       return (
         <Stack horizontal tokens={{ childrenGap: 5 }}>
           <IconButton
             iconProps={addIcon}
             title="Add"
             ariaLabel="Add"
+            styles={addButtonStyles}
             onClick={() => alert(`Add clicked for ${item.task}`)}
           />
           <IconButton
             iconProps={deleteIcon}
             title="Delete"
             ariaLabel="Delete"
+            styles={deleteButtonStyles}
             onClick={() => alert(`Delete clicked for ${item.task}`)}
           />
         </Stack>
@@ -289,11 +311,20 @@ export class MyDetailsList extends React.Component<{}, IMyListState> {
   private _onRenderRow = (props?: IDetailsRowProps) => {
     if (!props) return null;
 
+    const isSelected =
+      props.itemIndex !== undefined &&
+      props.itemIndex >= 0 &&
+      props.selection?.isIndexSelected?.(props.itemIndex);
+
     const customStyles: Partial<IDetailsRowStyles> = {
       root: {
-        backgroundColor:
-          props.itemIndex % 2 === 0 ? theme.palette.themeLighterAlt : undefined,
+        backgroundColor: isSelected ? "#D1D9FF" : "white",
         minHeight: 60,
+        selectors: {
+          "&:hover": {
+            backgroundColor: isSelected ? "#D1D9FF" : "#E8EAF6", // hover states
+          },
+        },
       },
       cell: {
         display: "flex",
@@ -303,6 +334,24 @@ export class MyDetailsList extends React.Component<{}, IMyListState> {
 
     return <DetailsRow {...props} styles={customStyles} />;
   };
+
+  // private _onRenderRow = (props?: IDetailsRowProps) => {
+  //   if (!props) return null;
+
+  //   const customStyles: Partial<IDetailsRowStyles> = {
+  //     root: {
+  //       backgroundColor:
+  //         props.itemIndex % 2 === 0 ? theme.palette.themeLighterAlt : undefined,
+  //       minHeight: 60,
+  //     },
+  //     cell: {
+  //       display: "flex",
+  //       alignItems: "center",
+  //     },
+  //   };
+
+  //   return <DetailsRow {...props} styles={customStyles} />;
+  // };
 
   // private _onRenderRow = (props?: IDetailsRowProps) => {
   //   const customStyles: Partial<IDetailsRowStyles> = {};
@@ -376,9 +425,42 @@ export class MyDetailsList extends React.Component<{}, IMyListState> {
               })),
             }}
             onClick={this._applyProjectToAll}
+            styles={{
+              root: {
+                backgroundColor: "#ffffff", // default background
+                color: "#6264A7", // text color
+              },
+              rootHovered: {
+                backgroundColor: "#E8E8F6", // hover background color
+                color: "#4E4FA2", // hover text color
+              },
+              //   rootPressed: {
+              //     backgroundColor: "#D0D0F0", // pressed background color
+              //     color: "#3B3B94",
+              //   },
+
+              splitButtonMenuButton: {
+                backgroundColor: "#ffffff",
+                selectors: {
+                  ":hover": {
+                    backgroundColor: "#E8E8F6", // hover for small arrow
+                  },
+                  ":active": {
+                    backgroundColor: "#6264A7", // pressed for arrow
+                    color: "white",
+                  },
+                },
+              },
+            }}
           />
-          <span style={{ fontSize: 14, color: "#555" }}>
-            Current: <strong>{this.state.selectedProject}</strong>
+          <span style={{ fontSize: 14, color: " #6264A7" }}>
+            Current:{" "}
+            <strong>
+              {this.state.selectedProject
+                ? this.state.selectedProject.charAt(0).toUpperCase() +
+                  this.state.selectedProject.slice(1)
+                : ""}
+            </strong>
           </span>
         </Stack>
         <DetailsList
@@ -417,7 +499,7 @@ const customSplitButtonStyles: IButtonStyles = {
   },
   splitButtonMenuIcon: { fontSize: "7px" },
   splitButtonDivider: {
-    backgroundColor: "#c8c8c8",
+    backgroundColor: "#6264A7",
     width: 1,
     right: 26,
     position: "absolute",
@@ -427,6 +509,7 @@ const customSplitButtonStyles: IButtonStyles = {
   splitButtonContainer: {
     selectors: {
       [HighContrastSelector]: { border: "none" },
+      color: "#6264A7",
     },
   },
 };
@@ -462,7 +545,7 @@ const stackStyles: Partial<IStackStyles> = {
     width: "960px",
     margin: "0 auto",
     textAlign: "center",
-    color: "#605e5c",
+    color: " #515389ff",
   },
 };
 
@@ -480,6 +563,25 @@ export const ButtonDefault: React.FunctionComponent<{
         allowDisabledFocus
         disabled={disabled}
         checked={checked}
+        styles={{
+          root: {
+            backgroundColor: "#6264A7",
+            color: "white",
+            border: "none",
+          },
+          rootHovered: {
+            backgroundColor: "#4e5087ff",
+            color: "black",
+          },
+          rootPressed: {
+            backgroundColor: "#E6F4EA",
+            color: "black",
+          },
+          rootDisabled: {
+            backgroundColor: "#f3f2f1",
+            // color: "#a19f9d",
+          },
+        }}
       />
     </Stack>
   );
