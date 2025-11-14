@@ -64,12 +64,29 @@ const names = [
   "Jack",
 ];
 
+const taskSamples = [
+  "Review design mockups",
+  "Prepare project plan",
+  "Test user login workflow",
+  "Write documentation",
+  "Update dependency packages",
+  "Fix API response formatting",
+  "Organize client feedback",
+  "Prepare weekly summary report",
+  "Review pull requests",
+  "Schedule sprint retrospective",
+];
+
+//camel case function
+//interface has PascalCase
+//class MyDetailsList
+
 // Generate sample data
 const createMyItems = (count: number): IMyItem[] => {
   return Array.from({ length: count }, (_, i) => ({
     key: `item-${i}`,
     project: projectOptions[0].key as string,
-    task: `Task ${i}`,
+    task: taskSamples[i % taskSamples.length],
     assigned: names[i % names.length], // names
     dateCreated: new Date(
       2025,
@@ -116,6 +133,17 @@ const myColumns = (
             updateProject(index, option.key as string);
           }
         }}
+        styles={{
+          dropdown: {
+            borderRadius: 8, // round the dropdown box
+          },
+          title: {
+            borderRadius: 8, // round the text area inside
+          },
+          callout: {
+            borderRadius: 8, // round the dropdown menu
+          },
+        }}
       />
     ),
   },
@@ -123,7 +151,7 @@ const myColumns = (
     key: "task",
     name: "Task",
     fieldName: "task",
-    minWidth: 150,
+    minWidth: 270,
     onRender: (item: IMyItem, index?: number) => (
       <input
         type="text"
@@ -132,6 +160,7 @@ const myColumns = (
           width: "100%",
           border: "none",
           background: "transparent",
+          outline: "none",
         }}
         onChange={(e) => {
           if (index !== undefined) {
@@ -154,7 +183,7 @@ const myColumns = (
     key: "dateCreated",
     name: "Date Created",
     fieldName: "dateCreated",
-    minWidth: 80,
+    minWidth: 100,
     maxWidth: 120,
   },
   {
@@ -168,7 +197,7 @@ const myColumns = (
     key: "description",
     name: "Description",
     fieldName: "description",
-    minWidth: 200,
+    minWidth: 250,
     maxWidth: 400,
     isResizable: true,
     onRender: (item: IMyItem, index?: number) => (
@@ -177,13 +206,16 @@ const myColumns = (
           contentEditable
           suppressContentEditableWarning
           style={{
+            flexGrow: 1,
             whiteSpace: item.isDescriptionExpanded ? "normal" : "nowrap",
-            overflow: "hidden",
             textOverflow: "ellipsis",
-            maxWidth: item.isDescriptionExpanded ? "400px" : "200px",
-            border: "1px solid #6264A7",
+            overflow: "hidden",
+            maxWidth: item.isDescriptionExpanded ? "100%" : "200px",
+            border: "1px solid #ccc",
             padding: "2px 4px",
-            borderRadius: 4,
+            borderRadius: 8,
+            backgroundColor: "white",
+            outline: "none",
           }}
           onBlur={(e) => {
             if (index !== undefined) {
@@ -193,13 +225,19 @@ const myColumns = (
         >
           {item.description}
         </div>
-        <IconButton
-          iconProps={{
-            iconName: item.isDescriptionExpanded ? "CollapseMenu" : "More",
-          }}
-          title={item.isDescriptionExpanded ? "Collapse" : "Expand"}
-          onClick={() => index !== undefined && toggleDescriptionExpand(index)}
-        />
+
+        <div style={{ width: 32, display: "flex", justifyContent: "center" }}>
+          <IconButton
+            styles={{ root: { flexShrink: 0, cursor: "pointer" } }}
+            iconProps={{
+              iconName: item.isDescriptionExpanded ? "CollapseMenu" : "More",
+            }}
+            title={item.isDescriptionExpanded ? "Collapse" : "Expand"}
+            onClick={() =>
+              index !== undefined && toggleDescriptionExpand(index)
+            }
+          />
+        </div>
       </Stack>
     ),
   },
@@ -208,7 +246,7 @@ const myColumns = (
     key: "actions",
     name: "Actions",
     fieldName: "actions",
-    minWidth: 100,
+    minWidth: 160,
     maxWidth: 140,
     onRender: (item: IMyItem) => {
       // Render Add and Delete buttons for each row
@@ -222,6 +260,7 @@ const myColumns = (
         rootHovered: {
           backgroundColor: "#E6F4EA", // light green hover
           color: "#0B6A0B",
+          borderRadius: 8,
         },
       };
 
@@ -232,6 +271,7 @@ const myColumns = (
         rootHovered: {
           backgroundColor: "#FDE7E9", // light red hover
           color: "#8E1921",
+          borderRadius: 8,
         },
       };
       return (
@@ -293,6 +333,7 @@ export class MyDetailsList extends React.Component<{}, IMyListState> {
       ...item,
       project: selectedProject,
     }));
+    this._selection.setAllSelected(false);
     this.setState({ items: updatedItems });
   };
 
@@ -318,8 +359,13 @@ export class MyDetailsList extends React.Component<{}, IMyListState> {
 
     const customStyles: Partial<IDetailsRowStyles> = {
       root: {
-        backgroundColor: isSelected ? "#D1D9FF" : "white",
+        backgroundColor: isSelected
+          ? "#D1D9FF"
+          : props.itemIndex % 2 === 0
+          ? theme.palette.themeLighterAlt
+          : "white",
         minHeight: 60,
+        color: "black",
         selectors: {
           "&:hover": {
             backgroundColor: isSelected ? "#D1D9FF" : "#E8EAF6", // hover states
@@ -428,10 +474,12 @@ export class MyDetailsList extends React.Component<{}, IMyListState> {
             styles={{
               root: {
                 backgroundColor: "#ffffff", // default background
-                color: "#6264A7", // text color
+                color: "#6264A7",
+                borderRadius: 8,
+                border: "1px solid grey",
               },
               rootHovered: {
-                backgroundColor: "#E8E8F6", // hover background color
+                backgroundColor: "#D0D0F0", // hover background color
                 color: "#4E4FA2", // hover text color
               },
               //   rootPressed: {
@@ -441,6 +489,7 @@ export class MyDetailsList extends React.Component<{}, IMyListState> {
 
               splitButtonMenuButton: {
                 backgroundColor: "#ffffff",
+                borderRadius: "0 8px 8px 0",
                 selectors: {
                   ":hover": {
                     backgroundColor: "#E8E8F6", // hover for small arrow
@@ -473,7 +522,7 @@ export class MyDetailsList extends React.Component<{}, IMyListState> {
           )}
           setKey="set"
           selection={this._selection}
-          selectionMode={SelectionMode.multiple}
+          selectionMode={SelectionMode.single}
           checkButtonAriaLabel="select row"
           onRenderRow={this._onRenderRow}
         />
@@ -507,6 +556,8 @@ const customSplitButtonStyles: IButtonStyles = {
     bottom: 4,
   },
   splitButtonContainer: {
+    borderRadius: 8,
+    overflow: "hidden",
     selectors: {
       [HighContrastSelector]: { border: "none" },
       color: "#6264A7",
@@ -545,7 +596,7 @@ const stackStyles: Partial<IStackStyles> = {
     width: "960px",
     margin: "0 auto",
     textAlign: "center",
-    color: " #515389ff",
+    // color: " #515389ff",
   },
 };
 
@@ -568,6 +619,7 @@ export const ButtonDefault: React.FunctionComponent<{
             backgroundColor: "#6264A7",
             color: "white",
             border: "none",
+            borderRadius: 8,
           },
           rootHovered: {
             backgroundColor: "#4e5087ff",
@@ -579,7 +631,7 @@ export const ButtonDefault: React.FunctionComponent<{
           },
           rootDisabled: {
             backgroundColor: "#f3f2f1",
-            // color: "#a19f9d",
+            color: "#a19f9d",
           },
         }}
       />
@@ -588,29 +640,29 @@ export const ButtonDefault: React.FunctionComponent<{
 };
 
 //Split IconButton
-export const ButtonSplitCustom: React.FunctionComponent<IButtonProps> = (
-  props
-) => {
-  const { disabled, checked } = props;
+// export const ButtonSplitCustom: React.FunctionComponent<IButtonProps> = (
+//   props
+// ) => {
+//   const { disabled, checked } = props;
 
-  return (
-    <div>
-      {/* <Label>Split button with icon and custom styles</Label> */}
-      <IconButton
-        split
-        iconProps={addIcon}
-        splitButtonAriaLabel="See 2 options"
-        aria-roledescription="split button"
-        styles={customSplitButtonStyles}
-        menuProps={menuProps}
-        ariaLabel="New item"
-        onClick={_alertClicked}
-        disabled={disabled}
-        checked={checked}
-      />
-    </div>
-  );
-};
+//   return (
+//     <div>
+//       {/* <Label>Split button with icon and custom styles</Label> */}
+//       <IconButton
+//         split
+//         iconProps={addIcon}
+//         splitButtonAriaLabel="See 2 options"
+//         aria-roledescription="split button"
+//         styles={customSplitButtonStyles}
+//         menuProps={menuProps}
+//         ariaLabel="New item"
+//         onClick={_alertClicked}
+//         disabled={disabled}
+//         checked={checked}
+//       />
+//     </div>
+//   );
+// };
 
 // Click handler for split button
 function _alertClicked(): void {
@@ -618,9 +670,9 @@ function _alertClicked(): void {
 }
 
 // SearchBox
-export const SearchBoxUnderlined = () => (
-  <SearchBox placeholder="Search" underlined={true} />
-);
+// export const SearchBoxUnderlined = () => (
+//   <SearchBox placeholder="Search" underlined={true} />
+// );
 
 //Main app Component
 export const App: React.FunctionComponent = () => {
@@ -634,7 +686,7 @@ export const App: React.FunctionComponent = () => {
     >
       {/* <img className="App-logo" src={logo} alt="logo" /> */}
       <Text variant="xxLarge" styles={boldStyle}>
-        Task
+        Teams Task
       </Text>
       <Stack
         horizontal
@@ -642,8 +694,8 @@ export const App: React.FunctionComponent = () => {
         verticalAlign="center"
         tokens={{ childrenGap: 20 }}
       >
-        <ButtonSplitCustom />
-        <SearchBoxUnderlined />
+        {/* <ButtonSplitCustom /> */}
+        {/* <SearchBoxUnderlined /> */}
       </Stack>
       <MyDetailsList />
       {/* <Text variant="large">
